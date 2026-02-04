@@ -17,9 +17,10 @@ app.use(express.json({ limit: "5mb" })); // req.body
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
-      "https://toxo-frontend-l37c.onrender.com"
-    ],
+  "http://localhost:5173",
+  "https://toxo-frontend-l37c.onrender.com"
+],
+
     credentials: true,
   })
 );
