@@ -21,28 +21,54 @@ export const useChatStore = create((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
   setSelectedUser: (selectedUser) => set({ selectedUser }),
 
-  getAllContacts: async () => {
-    set({ isUsersLoading: true });
-    try {
-      const res = await axiosInstance.get("/messages/contacts");
-      set({ allContacts: res.data });
-    } catch (error) {
-      toast.error(error.response.data.message);
-    } finally {
-      set({ isUsersLoading: false });
-    }
-  },
+ getAllContacts: async () => {
+  set({ isUsersLoading: true });
+
+  try {
+    const res = await axiosInstance.get("/messages/contacts");
+
+    set({
+      allContacts: Array.isArray(res.data) ? res.data : [],
+    });
+
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to load contacts"
+    );
+
+    set({ allContacts: [] });
+
+  } finally {
+    set({ isUsersLoading: false });
+  }
+},
+
   getMyChatPartners: async () => {
-    set({ isUsersLoading: true });
-    try {
-      const res = await axiosInstance.get("/messages/chats");
-      set({ chats: res.data });
-    } catch (error) {
-      toast.error(error.response.data.message);
-    } finally {
-      set({ isUsersLoading: false });
-    }
-  },
+  set({ isUsersLoading: true });
+
+  try {
+    const res = await axiosInstance.get("/messages/chats");
+
+    // ✅ Ensure array
+    set({
+      chats: Array.isArray(res.data) ? res.data : [],
+    });
+
+  } catch (error) {
+    console.error("getMyChatPartners error:", error);
+
+    toast.error(
+      error.response?.data?.message || "Failed to load chats"
+    );
+
+    // ✅ Reset to empty on error
+    set({ chats: [] });
+
+  } finally {
+    set({ isUsersLoading: false });
+  }
+},
+
 
   getMessagesByUserId: async (userId) => {
     set({ isMessagesLoading: true });
@@ -75,9 +101,18 @@ export const useChatStore = create((set, get) => ({
     set({ messages: [...messages, optimisticMessage] });
 
     try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-      set({ messages: messages.concat(res.data) });
-    } catch (error) {
+  const res = await axiosInstance.post(
+    `/messages/send/${selectedUser._id}`,
+    messageData
+  );
+
+  set((state) => ({
+    messages: state.messages
+      .filter((msg) => !msg.isOptimistic) // remove temp
+      .concat(res.data),
+  }));
+
+} catch (error) {
       // remove optimistic message on failure
       set({ messages: messages });
       toast.error(error.response?.data?.message || "Something went wrong");
@@ -88,7 +123,9 @@ export const useChatStore = create((set, get) => ({
     const { selectedUser, isSoundEnabled } = get();
     if (!selectedUser) return;
 
-    const socket = useAuthStore.getState().socket;
+const socket = useAuthStore.getState().socket;
+
+if (!socket) return; // ✅ safety
 
     socket.on("newMessage", (newMessage) => {
       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
@@ -108,6 +145,9 @@ export const useChatStore = create((set, get) => ({
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
+
+if (!socket) return; // ✅ safety
+
     socket.off("newMessage");
   },
 }));
