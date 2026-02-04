@@ -101,8 +101,10 @@ res.cookie("jwt", "", {
   httpOnly: true,
   secure: ENV.NODE_ENV === "production",
   sameSite: "none",
+  domain: ".onrender.com",
   maxAge: 0,
 });
+
   res.status(200).json({ message: "Logged out successfully" });
 };
 
