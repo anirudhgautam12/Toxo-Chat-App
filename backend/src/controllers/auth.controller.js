@@ -100,7 +100,7 @@ export const logout = (_, res) => {
   res.cookie("jwt", "", {
     maxAge: 0,
     httpOnly: true, // prevent XSS attacks cross-site scripting attacks
-    sameSite: "strict", // CSRF attacks cross-site request forgery attacks
+    sameSite: ENV.NODE_ENV === "development" ? "strict" : "none",
     secure: ENV.NODE_ENV !== "development",
   });
 
