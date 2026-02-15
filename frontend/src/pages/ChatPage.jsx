@@ -12,8 +12,8 @@ function ChatPage() {
   const { activeTab, selectedUser } = useChatStore();
 
   return (
-    <div className="h-screen w-full flex items-center justify-center pt-20 px-4">
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg shadow-cl w-full max-w-6xl h-[calc(100vh-8rem)]">
+    <div className="h-screen md:h-screen lg:h-screen xl:h-screen 2xl:h-screen w-full flex items-center justify-center md:pt-20 md:px-4">
+      <div className="bg-slate-800/50 backdrop-blur-sm md:rounded-lg shadow-cl w-full max-w-6xl h-[100dvh] md:h-[calc(100vh-8rem)]">
         <BorderAnimatedContainer>
           <div className="flex w-full h-full overflow-hidden rounded-lg">
             {/* LEFT SIDE - SIDEBAR */}
