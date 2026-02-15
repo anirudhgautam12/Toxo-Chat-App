@@ -12,13 +12,12 @@ export const generateToken = (userId, res) => {
     expiresIn: "7d",
   });
 
- res.cookie("jwt", token, {
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-  httpOnly: true,
-  secure: ENV.NODE_ENV === "production",
-  sameSite: "none",
-  domain: ".onrender.com", // 🔥 THIS IS MISSING
-});
+  res.cookie("jwt", token, {
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in MS
+    httpOnly: true, // prevent XSS attacks cross-site scripting attacks
+    sameSite: "strict", // CSRF attacks cross-site request forgery attacks
+    secure: ENV.NODE_ENV !== "development",
+  });
 
 
   return token;

@@ -97,13 +97,12 @@ export const login = async (req, res) => {
 };
 
 export const logout = (_, res) => {
-res.cookie("jwt", "", {
-  httpOnly: true,
-  secure: ENV.NODE_ENV === "production",
-  sameSite: "none",
-  domain: ".onrender.com",
-  maxAge: 0,
-});
+  res.cookie("jwt", "", {
+    maxAge: 0,
+    httpOnly: true, // prevent XSS attacks cross-site scripting attacks
+    sameSite: "strict", // CSRF attacks cross-site request forgery attacks
+    secure: ENV.NODE_ENV !== "development",
+  });
 
   res.status(200).json({ message: "Logged out successfully" });
 };
