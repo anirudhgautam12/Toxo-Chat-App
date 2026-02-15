@@ -96,6 +96,11 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
+
+    socket.on("connect_error", (err) => {
+      console.log("Socket connection error:", err);
+      // Optional: toast.error("Socket connection failed");
+    });
   },
 
   disconnectSocket: () => {
