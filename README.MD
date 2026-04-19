@@ -1,28 +1,54 @@
-# TOXO - Real-Time Chat App 🚀
+🚀 TOXO – Real-Time Chat App
 
-## Features
-- JWT Authentication
-- Real-time messaging (Socket.IO)
-- Online status
-- Profile management
-- Cloudinary image upload
+TOXO is a modern real-time chat application that enables seamless communication with instant messaging, authentication, and user presence tracking. Built with a scalable full-stack architecture and optimized for performance.
 
-## Tech Stack
-- React + Vite
-- Node.js + Express
-- MongoDB
-- Socket.IO
-- Zustand
+✨ Features
+🔐 JWT Authentication
+💬 Real-time messaging using Socket.IO
+🟢 Online/Offline user status
+👤 Profile management
+🖼️ Image upload via Cloudinary
+⚡ Fast and responsive UI
+🛠️ Tech Stack
 
-## Setup
+Frontend:
 
-### Backend
+React + Vite
+Zustand (State Management)
+Tailwind CSS
+
+Backend:
+
+Node.js
+Express.js
+
+Database:
+
+MongoDB
+
+Real-Time:
+
+Socket.IO
+📂 Project Structure
+
+TOXO/
+│── frontend/ # Frontend (React + Vite)
+│── backend/ # Backend (Node.js + Express)
+│── README.md
+
+⚙️ Setup Instructions
+🔧 Backend Setup
+
 cd backend
 npm install
 npm run dev
 
-### Frontend
+💻 Frontend Setup
+
 cd frontend
 npm install
 npm run dev
 
+🌐 Live Demo
+
+👉 https://toxo-frontend-l37c.onrender.com/signup
