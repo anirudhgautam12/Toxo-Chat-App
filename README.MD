@@ -2,6 +2,10 @@
 
 TOXO is a modern real-time chat application that enables seamless communication with instant messaging, authentication, and user presence tracking. Built with a scalable full-stack architecture and optimized for performance.
 
+## 🌐 Live Demo
+
+👉 https://toxo-frontend-l37c.onrender.com/signup
+
 ## ✨ Features
 
   - 🔐 JWT Authentication
@@ -52,6 +56,4 @@ TOXO/
   - npm install
   - npm run dev
 
-## 🌐 Live Demo
 
-👉 https://toxo-frontend-l37c.onrender.com/signup
