@@ -100,7 +100,7 @@ function EmojiPicker({ onSelectEmoji }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-4 py-2 transition-colors ${
+        className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg p-2 md:px-4 md:py-2 transition-colors ${
           isOpen ? "text-cyan-500 bg-slate-700/50" : ""
         }`}
       >
@@ -109,7 +109,7 @@ function EmojiPicker({ onSelectEmoji }) {
 
       {/* Popover */}
       {isOpen && (
-        <div className="absolute bottom-14 right-0 w-72 md:w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-3 flex flex-col space-y-3 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-150">
+        <div className="fixed bottom-20 left-4 right-4 w-auto md:absolute md:bottom-14 md:right-0 md:w-80 md:left-auto bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-3 flex flex-col space-y-3 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-150">
           {/* Search Bar */}
           <div className="relative">
             <input
