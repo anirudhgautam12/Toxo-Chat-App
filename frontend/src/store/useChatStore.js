@@ -147,6 +147,36 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  editMessage: async (messageId, text) => {
+    try {
+      const res = await axiosInstance.put(`/messages/edit/${messageId}`, { text });
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, text: res.data.text, isEdited: true } : msg
+        ),
+      }));
+      toast.success("Message edited");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to edit message");
+    }
+  },
+
+  deleteMessage: async (messageId) => {
+    try {
+      await axiosInstance.delete(`/messages/delete/${messageId}`);
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId
+            ? { ...msg, isDeleted: true, text: "This message was deleted", image: undefined }
+            : msg
+        ),
+      }));
+      toast.success("Message deleted");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete message");
+    }
+  },
+
   subscribeToMessages: () => {
     const { selectedUser, isSoundEnabled } = get();
     if (!selectedUser) return;
@@ -213,6 +243,24 @@ export const useChatStore = create((set, get) => ({
         ),
       }));
     });
+
+    socket.on("messageEdited", ({ messageId, text, isEdited }) => {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, text, isEdited } : msg
+        ),
+      }));
+    });
+
+    socket.on("messageDeleted", ({ messageId }) => {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId
+            ? { ...msg, isDeleted: true, text: "This message was deleted", image: undefined }
+            : msg
+        ),
+      }));
+    });
   },
 
   unsubscribeFromMessages: () => {
@@ -225,5 +273,7 @@ export const useChatStore = create((set, get) => ({
     socket.off("messageReaction");
     socket.off("messagesDelivered");
     socket.off("messagesRead");
+    socket.off("messageEdited");
+    socket.off("messageDeleted");
   },
 }));

@@ -124,6 +124,10 @@ export const reactToMessage = async (req, res) => {
       return res.status(404).json({ message: "Message not found." });
     }
 
+    if (message.isDeleted) {
+      return res.status(400).json({ message: "Cannot react to a deleted message." });
+    }
+
     const existingReactionIndex = message.reactions.findIndex(
       (r) => r.userId.toString() === userId.toString()
     );
@@ -173,6 +177,82 @@ export const markMessagesAsRead = async (req, res) => {
     res.status(200).json({ message: "Messages marked as read" });
   } catch (error) {
     console.error("Error in markMessagesAsRead:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const editMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const { text } = req.body;
+    const userId = req.user._id;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ message: "Message text cannot be empty." });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found." });
+    }
+
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized: Only the sender can edit this message." });
+    }
+
+    if (message.isDeleted) {
+      return res.status(400).json({ message: "Cannot edit a deleted message." });
+    }
+
+    message.text = text.trim();
+    message.isEdited = true;
+    await message.save();
+
+    const senderSocketId = getReceiverSocketId(message.senderId);
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+
+    const payload = { messageId, text: message.text, isEdited: true };
+
+    if (senderSocketId) io.to(senderSocketId).emit("messageEdited", payload);
+    if (receiverSocketId) io.to(receiverSocketId).emit("messageEdited", payload);
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("Error in editMessage:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const userId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found." });
+    }
+
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized: Only the sender can delete this message." });
+    }
+
+    message.isDeleted = true;
+    message.text = "This message was deleted";
+    message.image = undefined;
+    await message.save();
+
+    const senderSocketId = getReceiverSocketId(message.senderId);
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+
+    const payload = { messageId };
+
+    if (senderSocketId) io.to(senderSocketId).emit("messageDeleted", payload);
+    if (receiverSocketId) io.to(receiverSocketId).emit("messageDeleted", payload);
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("Error in deleteMessage:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

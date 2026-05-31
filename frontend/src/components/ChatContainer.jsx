@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
 import MessagesLoadingSkeleton from "./MessagesLoadingSkeleton";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Pencil, Trash } from "lucide-react";
 
 // Helper to check if a string contains only emojis and spaces
 const isEmojiOnly = (str) => {
@@ -30,9 +30,14 @@ function ChatContainer() {
     unsubscribeFromMessages,
     typingUsers,
     reactToMessage,
+    editMessage,
+    deleteMessage,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editText, setEditText] = useState("");
 
   useEffect(() => {
     getMessagesByUserId(selectedUser._id);
@@ -73,21 +78,49 @@ function ChatContainer() {
                   className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"} group relative message-wrapper`}
                 >
                   {/* Reaction Hover Palette */}
-                  <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 z-10 transition-opacity duration-200 opacity-0 group-hover:opacity-100 ${
-                    msg.senderId === authUser._id ? "right-[82%]" : "left-[82%]"
-                  }`}>
-                    <div className="flex bg-slate-800 border border-slate-700/50 rounded-full p-1 shadow-lg gap-1 scale-90 md:scale-100">
-                      {["❤️", "👍", "😂", "😮", "🔥"].map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => reactToMessage(msg._id, emoji)}
-                          className="hover:scale-125 transition-transform px-1 py-0.5 active:scale-95 text-sm"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                  {!msg.isDeleted && (
+                    <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 z-10 transition-opacity duration-200 opacity-0 group-hover:opacity-100 ${
+                      msg.senderId === authUser._id ? "right-[82%]" : "left-[82%]"
+                    }`}>
+                      <div className="flex bg-slate-800 border border-slate-700/50 rounded-full p-1 shadow-lg gap-1 scale-90 md:scale-100 items-center">
+                        {["❤️", "👍", "😂", "😮", "🔥"].map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => reactToMessage(msg._id, emoji)}
+                            className="hover:scale-125 transition-transform px-1 py-0.5 active:scale-95 text-sm"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                        {msg.senderId === authUser._id && (
+                          <>
+                            <div className="w-[1px] h-4 bg-slate-700/50 self-center mx-0.5" />
+                            <button
+                              onClick={() => {
+                                setEditingMessageId(msg._id);
+                                setEditText(msg.text);
+                              }}
+                              className="hover:scale-125 transition-transform px-1.5 py-0.5 active:scale-95 text-xs text-slate-400 hover:text-cyan-400"
+                              title="Edit message"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this message?")) {
+                                  deleteMessage(msg._id);
+                                }
+                              }}
+                              className="hover:scale-125 transition-transform px-1.5 py-0.5 active:scale-95 text-xs text-slate-400 hover:text-red-400"
+                              title="Delete message"
+                            >
+                              <Trash className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div
                     className={`chat-bubble relative flex flex-col max-w-[80%] break-words ${
@@ -96,17 +129,63 @@ function ChatContainer() {
                         : msg.senderId === authUser._id
                         ? "bg-cyan-600 text-white"
                         : "bg-slate-800 text-slate-200"
-                    }`}
+                    } ${msg.isDeleted ? "text-slate-500 italic bg-slate-900/20 border border-slate-800/50" : ""}`}
                   >
-                    {msg.image && (
-                      <img src={msg.image} alt="Shared" className="rounded-lg h-48 object-cover" />
+                    {editingMessageId === msg._id ? (
+                      <div className="flex flex-col gap-2 p-1 min-w-[200px] md:min-w-[300px]">
+                        <input
+                          type="text"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (editText.trim()) {
+                                editMessage(msg._id, editText);
+                                setEditingMessageId(null);
+                              }
+                            } else if (e.key === "Escape") {
+                              setEditingMessageId(null);
+                            }
+                          }}
+                        />
+                        <div className="flex justify-end gap-1.5 text-xs">
+                          <button
+                            onClick={() => setEditingMessageId(null)}
+                            className="px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (editText.trim()) {
+                                editMessage(msg._id, editText);
+                                setEditingMessageId(null);
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded bg-cyan-500 hover:bg-cyan-600 text-white transition-colors"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {msg.image && !msg.isDeleted && (
+                          <img src={msg.image} alt="Shared" className="rounded-lg h-48 object-cover" />
+                        )}
+                        {msg.text && <p className={emojiOnly ? "leading-tight" : "mt-2"}>{msg.text}</p>}
+                      </>
                     )}
-                    {msg.text && <p className={emojiOnly ? "leading-tight" : "mt-2"}>{msg.text}</p>}
                     
                     {/* Timestamp & Read Receipt */}
                     <p className={`text-[10px] mt-1 opacity-70 flex items-center gap-1 justify-end ${
                       emojiOnly ? "text-slate-400 font-semibold" : ""
                     }`}>
+                      {msg.isEdited && !msg.isDeleted && (
+                        <span className="text-[9px] italic opacity-60 mr-0.5">(edited)</span>
+                      )}
                       {new Date(msg.createdAt).toLocaleTimeString(undefined, {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -144,8 +223,11 @@ function ChatContainer() {
                         return (
                           <button
                             key={emoji}
-                            onClick={() => reactToMessage(msg._id, emoji)}
+                            onClick={() => !msg.isDeleted && reactToMessage(msg._id, emoji)}
+                            disabled={msg.isDeleted}
                             className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-all ${
+                              msg.isDeleted ? "cursor-default opacity-85" : ""
+                            } ${
                               hasReacted
                                 ? "bg-cyan-500/20 border-cyan-500 text-cyan-400 font-semibold"
                                 : "bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700"
