@@ -109,7 +109,7 @@ function EmojiPicker({ onSelectEmoji }) {
 
       {/* Popover */}
       {isOpen && (
-        <div className="absolute bottom-14 left-0 w-72 md:w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-3 flex flex-col space-y-3 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-150">
+        <div className="absolute bottom-14 right-0 w-72 md:w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-3 flex flex-col space-y-3 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-150">
           {/* Search Bar */}
           <div className="relative">
             <input
