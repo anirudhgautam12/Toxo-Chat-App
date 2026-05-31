@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
+import { useChatStore } from "./useChatStore";
 
 const BASE_URL =
   import.meta.env.MODE === "development"
@@ -16,11 +17,20 @@ export const useAuthStore = create((set, get) => ({
   socket: null,
   onlineUsers: [],
 
+  requestNotificationPermission: () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  },
+
   checkAuth: async () => {
     try {
       const res = await axiosInstance.get("/auth/check");
       set({ authUser: res.data });
       get().connectSocket();
+      get().requestNotificationPermission();
     } catch (error) {
       console.log("Error in authCheck:", error);
       set({ authUser: null });
@@ -37,6 +47,7 @@ export const useAuthStore = create((set, get) => ({
 
       toast.success("Account created successfully!");
       get().connectSocket();
+      get().requestNotificationPermission();
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {
@@ -53,6 +64,7 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged in successfully");
 
       get().connectSocket();
+      get().requestNotificationPermission();
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {
@@ -98,6 +110,36 @@ export const useAuthStore = create((set, get) => ({
     // listen for online users event
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
+    });
+
+    socket.on("newMessage", (newMessage) => {
+      const selectedUser = useChatStore.getState().selectedUser;
+      const isWindowHidden = document.visibilityState === "hidden";
+      const isDifferentChat = !selectedUser || selectedUser._id !== newMessage.senderId;
+      const isMyMessage = newMessage.senderId === authUser._id;
+
+      if (!isMyMessage && (isWindowHidden || isDifferentChat) && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        const sender = useChatStore.getState().allContacts.find((u) => u._id === newMessage.senderId) || 
+                       useChatStore.getState().chats.find((u) => u._id === newMessage.senderId);
+        
+        const title = sender ? sender.fullName : "New Message";
+        const body = newMessage.text || "Sent an image";
+        const icon = sender?.profilePic || "/avatar.png";
+
+        const notification = new Notification(title, {
+          body,
+          icon,
+          tag: "new-message-" + newMessage.senderId,
+          renotify: true,
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          if (sender) {
+            useChatStore.getState().setSelectedUser(sender);
+          }
+        };
+      }
     });
 
     socket.on("connect_error", (err) => {

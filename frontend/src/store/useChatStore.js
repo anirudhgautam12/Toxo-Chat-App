@@ -12,6 +12,7 @@ export const useChatStore = create((set, get) => ({
   isUsersLoading: false,
   isMessagesLoading: false,
   isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
+  typingUsers: {},
 
   toggleSound: () => {
     localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -75,6 +76,7 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: res.data });
+      get().markMessagesAsRead(userId);
     } catch (error) {
       toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
@@ -119,13 +121,38 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  reactToMessage: async (messageId, emoji) => {
+    try {
+      const res = await axiosInstance.put(`/messages/react/${messageId}`, { emoji });
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, reactions: res.data.reactions } : msg
+        ),
+      }));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to add reaction");
+    }
+  },
+
+  markMessagesAsRead: async (senderId) => {
+    try {
+      await axiosInstance.put(`/messages/read/${senderId}`);
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.senderId === senderId && msg.status !== "read" ? { ...msg, status: "read" } : msg
+        ),
+      }));
+    } catch (error) {
+      console.error("Failed to mark messages as read:", error);
+    }
+  },
+
   subscribeToMessages: () => {
     const { selectedUser, isSoundEnabled } = get();
     if (!selectedUser) return;
 
-const socket = useAuthStore.getState().socket;
-
-if (!socket) return; // ✅ safety
+    const socket = useAuthStore.getState().socket;
+    if (!socket) return;
 
     socket.on("newMessage", (newMessage) => {
       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
@@ -134,20 +161,69 @@ if (!socket) return; // ✅ safety
       const currentMessages = get().messages;
       set({ messages: [...currentMessages, newMessage] });
 
+      get().markMessagesAsRead(selectedUser._id);
+
       if (isSoundEnabled) {
         const notificationSound = new Audio("/sounds/notification.mp3");
-
-        notificationSound.currentTime = 0; // reset to start
+        notificationSound.currentTime = 0;
         notificationSound.play().catch((e) => console.log("Audio play failed:", e));
       }
+    });
+
+    socket.on("userTyping", ({ senderId }) => {
+      if (senderId !== selectedUser._id) return;
+      set((state) => ({
+        typingUsers: { ...state.typingUsers, [senderId]: true },
+      }));
+    });
+
+    socket.on("userStopTyping", ({ senderId }) => {
+      if (senderId !== selectedUser._id) return;
+      set((state) => ({
+        typingUsers: { ...state.typingUsers, [senderId]: false },
+      }));
+    });
+
+    socket.on("messageReaction", ({ messageId, reactions }) => {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, reactions } : msg
+        ),
+      }));
+    });
+
+    socket.on("messagesDelivered", ({ receiverId }) => {
+      if (receiverId !== selectedUser._id) return;
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.receiverId === receiverId && msg.status === "sent"
+            ? { ...msg, status: "delivered" }
+            : msg
+        ),
+      }));
+    });
+
+    socket.on("messagesRead", ({ senderId }) => {
+      if (senderId !== selectedUser._id) return;
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.receiverId === senderId && msg.status !== "read"
+            ? { ...msg, status: "read" }
+            : msg
+        ),
+      }));
     });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
-
-if (!socket) return; // ✅ safety
+    if (!socket) return;
 
     socket.off("newMessage");
+    socket.off("userTyping");
+    socket.off("userStopTyping");
+    socket.off("messageReaction");
+    socket.off("messagesDelivered");
+    socket.off("messagesRead");
   },
 }));

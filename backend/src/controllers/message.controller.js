@@ -58,16 +58,18 @@ export const sendMessage = async (req, res) => {
       imageUrl = uploadResponse.secure_url;
     }
 
+    const receiverSocketId = getReceiverSocketId(receiverId);
+
     const newMessage = new Message({
       senderId,
       receiverId,
       text,
       image: imageUrl,
+      status: receiverSocketId ? "delivered" : "sent",
     });
 
     await newMessage.save();
 
-    const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
@@ -103,6 +105,74 @@ export const getChatPartners = async (req, res) => {
     res.status(200).json(chatPartners);
   } catch (error) {
     console.error("Error in getChatPartners: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const reactToMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.user._id;
+
+    if (!emoji) {
+      return res.status(400).json({ message: "Emoji is required." });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found." });
+    }
+
+    const existingReactionIndex = message.reactions.findIndex(
+      (r) => r.userId.toString() === userId.toString()
+    );
+
+    if (existingReactionIndex > -1) {
+      if (message.reactions[existingReactionIndex].emoji === emoji) {
+        message.reactions.splice(existingReactionIndex, 1);
+      } else {
+        message.reactions[existingReactionIndex].emoji = emoji;
+      }
+    } else {
+      message.reactions.push({ userId, emoji });
+    }
+
+    await message.save();
+
+    const senderSocketId = getReceiverSocketId(message.senderId);
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+
+    const payload = { messageId, reactions: message.reactions };
+
+    if (senderSocketId) io.to(senderSocketId).emit("messageReaction", payload);
+    if (receiverSocketId) io.to(receiverSocketId).emit("messageReaction", payload);
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("Error in reactToMessage:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const markMessagesAsRead = async (req, res) => {
+  try {
+    const { id: senderId } = req.params;
+    const myId = req.user._id;
+
+    await Message.updateMany(
+      { senderId, receiverId: myId, status: { $ne: "read" } },
+      { $set: { status: "read" } }
+    );
+
+    const senderSocketId = getReceiverSocketId(senderId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesRead", { senderId: myId });
+    }
+
+    res.status(200).json({ message: "Messages marked as read" });
+  } catch (error) {
+    console.error("Error in markMessagesAsRead:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
