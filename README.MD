@@ -4,7 +4,7 @@ TOXO is a modern real-time chat application that enables seamless communication 
 
 ## 🌐 Live Demo
 
-👉 https://toxo-frontend-l37c.onrender.com/signup
+👉 https://toxo-chat-app.vercel.app/
 
 ## ✨ Features
 
