@@ -25,7 +25,7 @@ export const getMessagesByUserId = async (req, res) => {
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
-    });
+    }).sort({ createdAt: 1 });
 
     res.status(200).json(messages);
   } catch (error) {
@@ -85,19 +85,17 @@ export const getChatPartners = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
 
-    // find all the messages where the logged-in user is either sender or receiver
-    const messages = await Message.find({
-      $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
-    });
+    // Retrieve unique chat partner IDs directly without loading all message documents into memory
+    const [sentPartners, receivedPartners] = await Promise.all([
+      Message.distinct("receiverId", { senderId: loggedInUserId }),
+      Message.distinct("senderId", { receiverId: loggedInUserId }),
+    ]);
 
     const chatPartnerIds = [
-      ...new Set(
-        messages.map((msg) =>
-          msg.senderId.toString() === loggedInUserId.toString()
-            ? msg.receiverId.toString()
-            : msg.senderId.toString()
-        )
-      ),
+      ...new Set([
+        ...sentPartners.map((id) => id.toString()),
+        ...receivedPartners.map((id) => id.toString()),
+      ]),
     ];
 
     const chatPartners = await User.find({ _id: { $in: chatPartnerIds } }).select("-password");

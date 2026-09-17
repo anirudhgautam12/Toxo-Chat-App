@@ -50,6 +50,10 @@ const messageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes to ensure instant queries without full collection scans
+messageSchema.index({ senderId: 1, receiverId: 1, createdAt: 1 });
+messageSchema.index({ receiverId: 1, senderId: 1, createdAt: 1 });
+
 const Message = mongoose.model("Message", messageSchema);
 
 export default Message;

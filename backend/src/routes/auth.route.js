@@ -5,10 +5,9 @@ import { arcjetProtection } from "../middleware/arcjet.middleware.js";
 
 const router = express.Router();
 
-router.use(arcjetProtection);
-
-router.post("/signup", signup);
-router.post("/login", login);
+// Apply Arcjet bot & rate-limit protection only to sensitive public auth entry points
+router.post("/signup", arcjetProtection, signup);
+router.post("/login", arcjetProtection, login);
 router.post("/logout", logout);
 
 router.put("/update-profile", protectRoute, updateProfile);
